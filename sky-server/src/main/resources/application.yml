@@ -1,0 +1,72 @@
+server:
+  port: 8080
+
+spring:
+  config:
+    import: optional:classpath:application-local.yml
+  application:
+    name: sky-take-out
+
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+
+  profiles:
+    active: dev
+
+  main:
+    allow-circular-references: true
+
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
+
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+
+  datasource:
+    druid:
+      driver-class-name: ${sky.datasource.driver-class-name}
+      url: jdbc:mysql://${sky.datasource.host}:${sky.datasource.port}/${sky.datasource.database}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+      username: ${sky.datasource.username}
+      password: ${sky.datasource.password}
+
+sky:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    host: localhost
+    port: 3306
+    database: sky_take_out
+    username: root
+    password: ${SKY_DB_PASSWORD:}
+  jwt:
+    admin-secret-key: itcast-itcast-itcast-itcast-itcast
+    admin-ttl: 7200000
+    admin-token-name: token
+    user-secret-key: itheima-itheima-itheima-itheima-itheima
+    user-ttl: 7200000
+    user-token-name: authentication
+  file:
+    upload:
+      path: ${SKY_UPLOAD_PATH:upload}
+  wechat:
+    appid: wx6425b63d4e834a2e
+    secret: ${WECHAT_SECRET:}
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.sky.entity
+  configuration:
+    map-underscore-to-camel-case: true
+
+logging:
+  level:
+    com:
+      sky:
+        mapper: debug
+        service: info
+        controller: info

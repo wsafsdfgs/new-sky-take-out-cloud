@@ -1,0 +1,15 @@
+# 构建产物
+target/
+*.class
+
+# IDEA
+.idea/
+*.iml
+.idea.bak/
+
+# 本地密钥（不会提交；参考 application-local.example.yml）
+**/application-local.yml
+
+# 日志
+*.log
+logs/

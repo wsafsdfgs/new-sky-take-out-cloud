@@ -1,0 +1,6 @@
+# 复制此文件为 application-local.yml，填入自己的真实值。
+# application-local.yml 已被 .gitignore 忽略，改它不会被提交。
+spring:
+  ai:
+    dashscope:
+      api-key: sk-xxxx-your-own-api-key
