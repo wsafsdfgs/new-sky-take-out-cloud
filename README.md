@@ -1,7 +1,7 @@
 # 苍穹外卖服务化改造
 
-基于教学项目「苍穹外卖」，在原三模块工程基础上新增 ai-service 模块，形成 4 个 Maven 模块的聚合工程，
-并加入服务注册发现、声明式远程调用、接口限流和消息队列，补齐单体架构中缺失的几项能力。
+基于教学项目「苍穹外卖」，在原 sky-common / sky-pojo / sky-server 三模块工程上新增独立的 ai-service 模块，
+形成 4 个 Maven 模块的聚合工程与 2 个可独立部署的服务，并加入服务注册发现、声明式远程调用、接口限流和消息队列。
 
 改造前的业务代码基本保留，改动集中在这部分。工程共 171 个类、约 1 万行 Java 代码、100 个接口方法。
 
@@ -14,7 +14,8 @@
 **AI 客服服务（ai-service，8081）**
 
 SSE 流式对话接口，模型可调用订单查询、业务数据、知识库三类工具函数；知识库支持检索增强（RAG）；
-会话记录存 Redis，按 sessionId 维护上下文。服务内置一个自测页面 `http://localhost:8081/index.html`。
+会话记录存 Redis，按 sessionId 维护上下文。前端有两个入口：商家端经营助手接入商家端 Web（`/ai-assistant`），
+面向用户的客服接入微信小程序端，调试使用微信开发者工具。
 
 ## 模块
 
@@ -25,15 +26,16 @@ SSE 流式对话接口，模型可调用订单查询、业务数据、知识库�
 | `sky-server` | 主业务服务 | 65 类 / 5517 行 / 84 接口 |
 | `ai-service` | AI 客服服务 | 25 类 / 1915 行 / 16 接口 |
 
-新增 ai-service 的依据是资源画像：
-AI 调用大模型，请求耗时秒级、内存占用高、存在被限流的情况，
-与毫秒级的交易接口放在同一 JVM 会互相影响；common 与 pojo
-为原有公共模块，两个服务共用一份版本
+新增 ai-service 的依据是资源画像。AI 服务调用大模型，单次请求耗时在秒级，占用内存较多，
+并且存在被限流的情况，与订单交易这类毫秒级接口放在同一个 JVM 中会互相影响，
+GC、线程池和数据库连接池都是共享的，因此独立部署。`common` 与 `pojo` 是原工程已有的公共模块，
+两个服务共用一份版本，字段修改不会出现两边不一致。
+
 ## 架构
 
 ```
                      ┌──────────────┐
-  小程序 / 商家端 ───▶│  sky-server  │ :8080   sky-take-out
+  小程序 / 商家端 ──▶│  sky-server  │ :8080   sky-take-out
                      │   主业务服务  │
                      └──┬───┬───┬───┘
                         │   │   │
@@ -46,8 +48,8 @@ AI 调用大模型，请求耗时秒级、内存占用高、存在被限流的�
                           ▲
                           │ db1 会话记忆
                      ┌────┴─────────┐
-  AI 自测页 / 前端 ──▶│  ai-service  │ :8081   ai-customer-service
-                     │  AI 客服服务  │
+  商家端经营助手  ──▶│  ai-service  │ :8081   ai-customer-service
+  小程序 AI 客服  ──▶│  AI 客服服务  │
                      └──────┬───────┘
                             │ OpenFeign，按服务名寻址
                             └──────────────▶ sky-server
@@ -219,7 +221,7 @@ cp sky-server/src/main/resources/application-local.example.yml sky-server/src/ma
 |---|---|
 | 服务注册 | 访问 `http://localhost:8848/nacos`，服务列表中有 `sky-take-out` 与 `ai-customer-service` |
 | 主业务接口 | 访问 `http://localhost:8080/doc.html` 调用任意查询接口 |
-| AI 客服 | 打开 `http://localhost:8081/index.html`，询问「查我的订单」，返回真实订单数据 |
+| AI 客服 | 正式入口为商家端 Web 的 `/ai-assistant` 与微信小程序端；本地联调可临时使用服务自带的调试页 `http://localhost:8081/index.html` |
 
 演示超时取消可将 `application-dev.yml` 中的 `sky.order.timeout-minutes` 改为 1，重启后下单，
 一分钟后订单状态变为 6（已取消），取消原因为「超时未支付」。
@@ -246,11 +248,11 @@ new-sky-take-out-cloud/
 │   ├── function/                Function Calling 工具函数
 │   ├── service/                 对话与会话记忆、RAG 检索
 │   ├── interceptor/             token 解析
-│   └── resources/static/        AI 自测页面
+│   └── resources/static/        本地联调用的调试页
 └── bench/                       压测脚本
 ```
 
 ## 说明
 
 业务功能与前端来自教学项目「苍穹外卖」，前端不在本仓库：商家端 Web 为独立工程，小程序使用微信开发者工具。
-本项目改动集中在服务拆分、注册发现、远程调用、限流与延迟消息。
+本项目改动集中在新增独立服务、注册发现、远程调用、限流与延迟消息。
